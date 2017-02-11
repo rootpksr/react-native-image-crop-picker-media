@@ -50,6 +50,7 @@ RCT_EXPORT_MODULE();
                                 @"multiple": @NO,
                                 @"cropping": @NO,
                                 @"cropperCircleOverlay": @NO,
+                                @"media": @"photo", // @"video" @"all"
                                 @"includeBase64": @NO,
                                 @"compressVideo": @YES,
                                 @"maxFiles": @5,
@@ -66,14 +67,14 @@ RCT_EXPORT_MODULE();
     return self;
 }
 
-- (void)checkCameraPermissions:(void(^)(BOOL granted))callback
+- (void)checkCameraPermissions:(NSString *)avMediaType completion(void(^)(BOOL granted))callback
 {
-    AVAuthorizationStatus status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo];
+    AVAuthorizationStatus status = [AVCaptureDevice authorizationStatusForMediaType:avMediaType];
     if (status == AVAuthorizationStatusAuthorized) {
         callback(YES);
         return;
     } else if (status == AVAuthorizationStatusNotDetermined){
-        [AVCaptureDevice requestAccessForMediaType:AVMediaTypeVideo completionHandler:^(BOOL granted) {
+        [AVCaptureDevice requestAccessForMediaType:avMediaType completionHandler:^(BOOL granted) {
             callback(granted);
             return;
         }];
@@ -114,7 +115,7 @@ RCT_EXPORT_METHOD(openCamera:(NSDictionary *)options
     self.reject(ERROR_PICKER_CANNOT_RUN_CAMERA_ON_SIMULATOR_KEY, ERROR_PICKER_CANNOT_RUN_CAMERA_ON_SIMULATOR_MSG, nil);
     return;
 #else
-    [self checkCameraPermissions:^(BOOL granted) {
+    [self checkCameraPermissions:(([[self.options objectForKey:@"cropping"] boolValue] || [[self.options objectForKey:@"media"] isEqualToString:@"photo"]) ? AVMediaTypePhoto : AVMediaTypeVideo) completion^(BOOL granted) {
         if (!granted) {
             self.reject(ERROR_PICKER_NO_CAMERA_PERMISSION_KEY, ERROR_PICKER_NO_CAMERA_PERMISSION_MSG, nil);
             return;
@@ -235,8 +236,10 @@ RCT_EXPORT_METHOD(openPicker:(NSDictionary *)options
                 imagePickerController.assetCollectionSubtypes = albumsToShow;
             }
 
-            if ([[self.options objectForKey:@"cropping"] boolValue]) {
+            if ([[self.options objectForKey:@"cropping"] boolValue] || [[self.options objectForKey:@"media"] isEqualToString:@"photo"]) {
                 imagePickerController.mediaType = QBImagePickerMediaTypeImage;
+            } else if ([[self.options objectForKey:@"media"] isEqualToString:@"video"]){
+                imagePickerController.mediaType = QBImagePickerMediaTypeVideo;
             } else {
                 imagePickerController.mediaType = QBImagePickerMediaTypeAny;
             }
