@@ -67,7 +67,7 @@ RCT_EXPORT_MODULE();
     return self;
 }
 
-- (void)checkCameraPermissions:(NSString *)avMediaType completion(void(^)(BOOL granted))callback
+- (void)checkCameraPermissions:(NSString *)avMediaType completion:(void(^)(BOOL granted))callback
 {
     AVAuthorizationStatus status = [AVCaptureDevice authorizationStatusForMediaType:avMediaType];
     if (status == AVAuthorizationStatusAuthorized) {
