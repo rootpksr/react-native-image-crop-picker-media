@@ -114,26 +114,35 @@ RCT_EXPORT_METHOD(openCamera:(NSDictionary *)options
 #if TARGET_IPHONE_SIMULATOR
     self.reject(ERROR_PICKER_CANNOT_RUN_CAMERA_ON_SIMULATOR_KEY, ERROR_PICKER_CANNOT_RUN_CAMERA_ON_SIMULATOR_MSG, nil);
     return;
-#else
-    [self checkCameraPermissions:(([[self.options objectForKey:@"cropping"] boolValue] || [[self.options objectForKey:@"media"] isEqualToString:@"photo"]) ? AVMediaTypePhoto : AVMediaTypeVideo) completion^(BOOL granted) {
-        if (!granted) {
-            self.reject(ERROR_PICKER_NO_CAMERA_PERMISSION_KEY, ERROR_PICKER_NO_CAMERA_PERMISSION_MSG, nil);
-            return;
-        }
-
-        UIImagePickerController *picker = [[UIImagePickerController alloc] init];
-        picker.delegate = self;
-        picker.allowsEditing = NO;
-        picker.sourceType = UIImagePickerControllerSourceTypeCamera;
-        if ([[self.options objectForKey:@"useFrontCamera"] boolValue]) {
-            picker.cameraDevice = UIImagePickerControllerCameraDeviceFront;
-        }
-
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [[self getRootVC] presentViewController:picker animated:YES completion:nil];
-        });
-    }];
+    
+    if ([[self.options objectForKey:@"cropping"] boolValue] || [[self.options objectForKey:@"media"] isEqualToString:@"photo"]) {
+        [self cameraPermissionsGranted];
+    } else {
+        [self checkCameraPermissions:AVMediaTypeVideo completion:^(BOOL granted) {
+            if (!granted) {
+                self.reject(ERROR_PICKER_NO_CAMERA_PERMISSION_KEY, ERROR_PICKER_NO_CAMERA_PERMISSION_MSG, nil);
+                return;
+            }
+            
+            [self cameraPermissionsGranted];
+        }];
+    }
+    
 #endif
+}
+
+- (void)cameraPermissionsGranted {
+    UIImagePickerController *picker = [[UIImagePickerController alloc] init];
+    picker.delegate = self;
+    picker.allowsEditing = NO;
+    picker.sourceType = UIImagePickerControllerSourceTypeCamera;
+    if ([[self.options objectForKey:@"useFrontCamera"] boolValue]) {
+        picker.cameraDevice = UIImagePickerControllerCameraDeviceFront;
+    }
+    
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [[self getRootVC] presentViewController:picker animated:YES completion:nil];
+    });
 }
 
 - (void)imagePickerController:(UIImagePickerController *)picker didFinishPickingMediaWithInfo:(NSDictionary *)info {
